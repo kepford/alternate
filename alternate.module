@@ -1,0 +1,141 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * A catch-all module to handle one-off client requests.
+ */
+
+/**
+ * Implementation of hook_profile_alter().
+ *
+ * This hook fires whenever a user profile page (e.g. user/1/view) is being
+ * displayed, and can be used to add additional elements to the page.
+ *
+ * Pro tip: Be very careful to name this variable $account, and not $user. ;)
+ */
+function alternate_profile_alter(&$account) {
+//dsm($account, 'hook_profile_alter: $account');
+
+  // Add a funny picture user 1's user profile.
+  if ($account->uid == 1) {
+    $image = drupal_get_path('module', 'alternate') . '/boss.jpg';
+    $account->content['boss'] = array(
+    //'#type' => 'markup', // This is the default if unspecified.
+      '#value' => theme('image', $image),
+    );
+  }
+}
+
+/**
+ * Implementation of hook_link_alter().
+ *
+ * Use this to remove or modify node and comment links provided by other modules.
+ * Use hook_link() to add 'em.
+ */
+function alternate_link_alter(&$link, $node) {
+//dsm($link, 'hook_link_alter: $link');
+//dsm($node, 'hook_link_alter: $node');
+
+  // On story nodes, hide the "Add new comment" link; the comment form shows
+  // below, so it's redundant.
+  if ($node->type == 'story') {
+    unset($link['comment_add']);
+  }
+}
+
+/**
+ * Implementation of hook_menu_alter().
+ *
+ * This hook is very handy for all sorts of things that might not be immediately
+ * obvious: not only changing menu links and tabs, but also controlling aspects
+ * of the URL-to-page mapping, such as access control.
+ */
+function alternate_menu_alter(&$items) {
+//dsm($items, 'hook_menu_alter: $items');
+
+  // Hide the 'Devel' tab on nodes. It's still accessible by direct path access,
+  // but won't scare the QA people.
+  $items['node/%node/devel']['type'] = MENU_CALLBACK;
+
+  // Change the "View" tab on user profiles to say "My account".
+  $items['user/%user/view']['title'] = t('My account');
+
+  // Only user 1 should be able to control sensitive admin pages.
+  $items['admin/user/permissions']['access callback'] = 'alternate_lock_down_access';
+}
+
+/**
+ * A custom access callback to restrict pages only to uid 1.
+ */
+function alternate_lock_down_access() {
+  global $user;
+
+  return ($user->uid == 1);
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+ * hook_form_alter() is the Swiss Army Knife of Drupal. Here you can add/remove
+ * form elements, change element properties, or even alter the entire workflow
+ * of form validation and execution. Because so much of Drupal's interface is
+ * exposed via forms, this single hook gives immense control over a variety of
+ * aspects of the system.
+ */
+function alternate_form_alter(&$form, &$form_state, $form_id) {
+//dsm($form, 'hook_form_alter: $form');
+//dsm($form_id, 'hook_form_alter: $form_id');
+
+  if (isset($form['#node']) && $form['#node']->type . '_node_form' == $form_id) {
+    // Make revisions required on node forms.
+    $form['revision_information']['log']['#required'] = TRUE;
+
+    // Remove the stupid input format fieldset. It's scaring the children.
+    $form['body_field']['format']['#access'] = FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * Use this when targeting a specific form, to help with code organization. BUT!
+ * Remember that hook_form_alter() will win, if it's altering the same form.
+ */
+function alternate_form_user_register_alter(&$form, &$form_state) {
+  // Custom validation function to check e-mail addresses.
+  $form['#validate'][] = 'alternate_user_register_validate';
+}
+
+/**
+ * Don't allow people to register from black-listed e-mail providers.
+ */
+function alternate_user_register_validate($form, &$form_state) {
+  // List of sketchy e-mail providers.
+  $blacklist = array('mailinator.com', 'safetymail.info', 'aol.com');
+
+  // Grab the domain name from the e-mail address.
+  list($local, $domain) = explode('@', $form_state['values']['mail']);
+
+  // Don't allow them to proceed if they're sketchy.
+  if (in_array($domain, $blacklist)) {
+    form_set_error('mail', t("I see what you're doing there... knock it off."));
+  }
+}
+
+/**
+ * Implementation of hook_views_data_alter().
+ *
+ * This hook allows you to tweak the fields exposed by other modules' views
+ * integration.
+ */
+function alternate_views_data_alter(&$data) {
+  // Replace all numeric View fields in all of Drupal with our numerify handler.
+  foreach ($data as $tablename => $table) {
+    foreach ($table as $columnname => $column) {
+      if (!empty($column['field']) && ($column['field']['handler'] == 'views_handler_field_numeric')) {
+        $column['field']['handler'] = 'databasics_field_numerify';
+      }
+    }
+  }
+}

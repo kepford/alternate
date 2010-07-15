@@ -1,0 +1,5 @@
+; $Id$
+name = Alternate 
+description = Demonstrates how to change the way Drupal works.
+core = 6.x
+package = Lullabot examples
