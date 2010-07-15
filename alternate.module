@@ -33,8 +33,8 @@ function alternate_profile_alter(&$account) {
  * Use this to remove or modify node and comment links provided by other modules.
  * Use hook_link() to add 'em.
  */
-function alternate_link_alter(&$link, $node) {
-//dsm($link, 'hook_link_alter: $link');
+function alternate_link_alter(&$links, $node) {
+//dsm($links, 'hook_link_alter: $links');
 //dsm($node, 'hook_link_alter: $node');
 
   // On story nodes, hide the "Add new comment" link; the comment form shows
