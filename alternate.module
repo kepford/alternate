@@ -37,10 +37,12 @@ function alternate_link_alter(&$links, $node) {
 //dsm($links, 'hook_link_alter: $links');
 //dsm($node, 'hook_link_alter: $node');
 
-  // On story nodes, hide the "Add new comment" link; the comment form shows
-  // below, so it's redundant.
-  if ($node->type == 'story') {
-    unset($link['comment_add']);
+  // If comments are set to show "Display below post or comments", and we're
+  // on a node page, remove the confusing "Add new comment" link.
+  if (arg(0) == 'node' && is_numeric(arg(1))) {
+    if (variable_get('comment_form_location_' . $node->type, COMMENT_FORM_BELOW) == COMMENT_FORM_BELOW) {
+      unset($links['comment_add']);
+    }
   }
 }
 
@@ -123,19 +125,3 @@ function alternate_user_register_validate($form, &$form_state) {
   }
 }
 
-/**
- * Implementation of hook_views_data_alter().
- *
- * This hook allows you to tweak the fields exposed by other modules' views
- * integration.
- */
-function alternate_views_data_alter(&$data) {
-  // Replace all numeric View fields in all of Drupal with our numerify handler.
-  foreach ($data as $tablename => $table) {
-    foreach ($table as $columnname => $column) {
-      if (!empty($column['field']) && ($column['field']['handler'] == 'views_handler_field_numeric')) {
-        $column['field']['handler'] = 'databasics_field_numerify';
-      }
-    }
-  }
-}
